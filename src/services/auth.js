@@ -75,5 +75,7 @@ function mapError(error) {
   if (m.includes('Password should be')) return 'La contraseña debe tener al menos 6 caracteres.'
   if (m.includes('provider is not enabled') || m.includes('Unsupported provider'))
     return 'El inicio de sesión con Google no está habilitado todavía en Supabase (Authentication → Sign In / Providers).'
+  if (m.toLowerCase().includes('invalid api key'))
+    return 'La clave de Supabase configurada en este despliegue no es válida. Revisa VITE_SUPABASE_ANON_KEY en Vercel (Settings → Environment Variables): debe ser la anon key completa (empieza por "eyJ...") y luego haz Redeploy.'
   return m || 'Error de autenticación.'
 }
