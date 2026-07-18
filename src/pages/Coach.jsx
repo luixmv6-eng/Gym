@@ -147,19 +147,26 @@ function Bubble({ from, text }) {
   const isUser = from === 'user'
   const action = isUser ? null : actionFor(text)
   return (
-    <div className={`flex flex-col gap-1.5 max-w-[85%] ${isUser ? 'self-end items-end' : 'self-start items-start'}`}>
-      <div className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap animate-fade-up ${
-        isUser
-          ? 'bg-primary text-slate-900 rounded-br-sm'
-          : 'bg-bg-card border border-line text-slate-100 rounded-bl-sm'
-      }`}>
-        {text}
-      </div>
-      {action && (
-        <Link to={action.to} className="chip border-primary/40 text-primary bg-primary/10 text-xs">
-          <action.icon className="w-3.5 h-3.5" /> {action.label}
-        </Link>
+    <div className={`flex gap-2 max-w-[88%] ${isUser ? 'self-end' : 'self-start'}`}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-full bg-ember flex items-center justify-center shrink-0 mt-auto shadow-glow">
+          <Dumbbell className="w-3.5 h-3.5 text-slate-950" strokeWidth={2.6} />
+        </div>
       )}
+      <div className={`flex flex-col gap-1.5 min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap animate-fade-up ${
+          isUser
+            ? 'bg-primary text-slate-900 rounded-br-sm'
+            : 'bg-bg-card border border-line text-slate-100 rounded-bl-sm'
+        }`}>
+          {text}
+        </div>
+        {action && (
+          <Link to={action.to} className="chip border-primary/40 text-primary bg-primary/10 text-xs">
+            <action.icon className="w-3.5 h-3.5" /> {action.label}
+          </Link>
+        )}
+      </div>
     </div>
   )
 }

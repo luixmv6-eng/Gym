@@ -6,7 +6,7 @@ import { ChevronDown, Lightbulb, HelpCircle } from 'lucide-react'
 export default function Tips() {
   const [open, setOpen] = useState(null)
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 stagger">
       <h1 className="text-2xl uppercase">Tips & Educación</h1>
 
       <div>

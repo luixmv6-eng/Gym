@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useStore } from './store/useStore'
-import { isSupabaseEnabled } from './services/supabaseClient'
+import { isSupabaseEnabled, keepAlivePing } from './services/supabaseClient'
 import { getCurrentUser, onAuthChange } from './services/auth'
 import { startSync, stopSync, pullState } from './services/sync'
 import Layout from './components/Layout'
@@ -41,6 +41,23 @@ export default function App() {
   const session = useStore((s) => s.session)
   const login = useStore((s) => s.login)
   const logout = useStore((s) => s.logout)
+  const ensureWeeklyRotation = useStore((s) => s.ensureWeeklyRotation)
+
+  // Rotación semanal de ejercicios: al abrir la app y al volver a ella,
+  // si empezó una semana nueva (lunes) la rutina rota automáticamente.
+  // El ping mantiene activa la base de datos (evita la pausa del plan gratuito).
+  useEffect(() => {
+    ensureWeeklyRotation()
+    keepAlivePing()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        ensureWeeklyRotation()
+        keepAlivePing()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, []) // eslint-disable-line
 
   // Bootstrap de sesión + sincronización con la nube (si Supabase está configurado)
   useEffect(() => {
@@ -52,7 +69,8 @@ export default function App() {
       if (user) {
         login(user)
         await pullState(user.id)
-        startSync(user.id)
+        ensureWeeklyRotation() // la nube puede traer una rutina de semanas anteriores
+        startSync(user.id, user.email)
       }
     })
 
@@ -60,7 +78,8 @@ export default function App() {
       if (user) {
         login(user)
         await pullState(user.id)
-        startSync(user.id)
+        ensureWeeklyRotation() // la nube puede traer una rutina de semanas anteriores
+        startSync(user.id, user.email)
       } else if (event === 'SIGNED_OUT') {
         // Solo cerramos sesión ante un cierre EXPLÍCITO de Supabase,
         // no al inicializar sin sesión (así no expulsamos una sesión local).

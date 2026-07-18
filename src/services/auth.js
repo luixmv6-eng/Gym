@@ -22,7 +22,12 @@ export async function signInWithGoogle() {
     return { user: null, error: 'Google Sign-In requiere configurar Supabase.' }
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin },
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: {
+        prompt: 'select_account', // deja elegir cuenta en vez de entrar con la última usada
+      },
+    },
   })
   return { user: null, error: error ? mapError(error) : null } // redirige
 }
@@ -68,5 +73,7 @@ function mapError(error) {
   if (m.includes('Invalid login')) return 'Email o contraseña incorrectos.'
   if (m.includes('already registered')) return 'Ese email ya está registrado.'
   if (m.includes('Password should be')) return 'La contraseña debe tener al menos 6 caracteres.'
+  if (m.includes('provider is not enabled') || m.includes('Unsupported provider'))
+    return 'El inicio de sesión con Google no está habilitado todavía en Supabase (Authentication → Sign In / Providers).'
   return m || 'Error de autenticación.'
 }

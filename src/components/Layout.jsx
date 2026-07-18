@@ -41,7 +41,9 @@ export default function Layout({ children }) {
             <div className="w-9 h-9 rounded-xl bg-ember flex items-center justify-center shadow-glow">
               <Dumbbell className="w-5 h-5 text-slate-950" strokeWidth={2.6} />
             </div>
-            <span className="font-display text-lg uppercase tracking-wide">{title}</span>
+            <span key={title} className="font-display text-lg uppercase tracking-wide animate-fade-in">
+              {title}
+            </span>
           </div>
           <nav className="flex items-center gap-0.5">
             {MORE.map(({ to, label, icon: Icon }) => (
@@ -63,7 +65,12 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-5 pb-28">{children}</main>
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-5 pb-28">
+        {/* key por ruta: re-monta el contenido para animar cada cambio de página */}
+        <div key={loc.pathname} className="animate-fade-up">
+          {children}
+        </div>
+      </main>
 
       {/* Bottom nav glass con indicador activo */}
       <nav className="fixed bottom-0 inset-x-0 z-30 glass border-t border-line/40 pb-[env(safe-area-inset-bottom)]">
@@ -82,9 +89,15 @@ export default function Layout({ children }) {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute top-0 h-0.5 w-8 rounded-full bg-ember" />
+                    <>
+                      <span className="absolute top-0 h-0.5 w-8 rounded-full bg-ember animate-scale-in" />
+                      <span className="nav-glow animate-fade-in" />
+                    </>
                   )}
-                  <Icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon
+                    className={`w-[22px] h-[22px] transition-transform ${isActive ? 'animate-pop' : ''}`}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
                   {label}
                 </>
               )}

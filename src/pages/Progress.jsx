@@ -33,7 +33,7 @@ export default function Progress() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 stagger">
       <h1 className="text-2xl uppercase">Progreso</h1>
 
       {/* Peso */}

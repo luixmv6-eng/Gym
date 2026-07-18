@@ -46,6 +46,34 @@ export async function pullState(userId) {
 
 let timer = null
 let lastPushed = ''
+let lastProfile = ''
+
+// Sincroniza los campos del perfil a la tabla relacional public.profiles,
+// para que los usuarios queden guardados de forma consultable (no solo como
+// blob JSON en user_state). Best-effort: si falla, la app sigue funcionando.
+export async function pushProfile(userId, email) {
+  if (!isSupabaseEnabled || !userId || userId === 'local') return
+  const p = useStore.getState().profile
+  if (!p) return
+  const row = {
+    id: userId,
+    email: email || null,
+    name: p.name ?? null,
+    age: p.age ?? null,
+    sex: p.sex ?? null,
+    weight: p.weight ?? null,
+    height: p.height ?? null,
+    goal: p.goal ?? null,
+    experience: p.experience ?? null,
+    days_per_week: p.daysPerWeek ?? null,
+    injuries: p.injuries ?? null,
+  }
+  const serialized = JSON.stringify(row)
+  if (serialized === lastProfile) return
+  lastProfile = serialized
+  const { error } = await supabase.from('profiles').upsert(row, { onConflict: 'id' })
+  if (error) console.warn('[sync] perfil no guardado (se conserva local):', error.message)
+}
 
 // Empuja el estado a la nube (con debounce). Best-effort: si falla, sigue local.
 export async function pushState(userId) {
@@ -65,12 +93,17 @@ export async function pushState(userId) {
 
 let unsub = null
 // Arranca la sincronización automática para un usuario.
-export function startSync(userId) {
+export function startSync(userId, email) {
   stopSync()
   if (!isSupabaseEnabled || !userId || userId === 'local') return
+  // Empuje inicial del perfil (por si ya hay onboarding hecho al iniciar sesión).
+  pushProfile(userId, email)
   unsub = useStore.subscribe(() => {
     clearTimeout(timer)
-    timer = setTimeout(() => pushState(userId), 1500)
+    timer = setTimeout(() => {
+      pushState(userId)
+      pushProfile(userId, email)
+    }, 1500)
   })
 }
 
@@ -79,4 +112,5 @@ export function stopSync() {
   unsub = null
   clearTimeout(timer)
   lastPushed = ''
+  lastProfile = ''
 }

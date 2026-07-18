@@ -74,6 +74,9 @@ export const EXERCISES = [
   { id: 'skullcrusher', name: 'Press francés', group: 'brazos', type: 'aislamiento', equip: 'barra', cues: 'Codos apuntando al techo, baja a la frente.', errors: 'Mover los hombros.' },
   { id: 'overhead-triceps', name: 'Extensión de tríceps sobre la cabeza', group: 'brazos', type: 'aislamiento', equip: 'mancuernas', cues: 'Codos cerca de la cabeza, estira arriba.', errors: 'Abrir los codos.' },
   { id: 'dips', name: 'Fondos', group: 'brazos', type: 'compuesto', equip: 'peso corporal', cues: 'Torso vertical para tríceps, controla la bajada.', errors: 'Bajar demasiado.' },
+  { id: 'close-grip-bench', name: 'Press cerrado', group: 'brazos', type: 'compuesto', equip: 'barra', cues: 'Agarre a la anchura de los hombros, codos pegados al torso.', errors: 'Agarre demasiado estrecho (castiga las muñecas).' },
+  { id: 'chinups', name: 'Dominadas supinas', group: 'brazos', type: 'compuesto', equip: 'barra fija', cues: 'Palmas hacia ti, sube con bíceps y espalda, barbilla sobre la barra.', errors: 'Medio rango, balanceo.' },
+  { id: 'bench-dips', name: 'Fondos entre bancos', group: 'brazos', type: 'compuesto', equip: 'peso corporal', cues: 'Manos al borde del banco, baja hasta 90° de codo.', errors: 'Hombros encogidos hacia las orejas.' },
 
   // ---------- CORE ----------
   { id: 'plank', name: 'Plancha', group: 'core', type: 'aislamiento', equip: 'peso corporal', cues: 'Cuerpo en línea, aprieta glúteos y abdomen.', errors: 'Cadera caída o muy alta.' },
@@ -83,6 +86,9 @@ export const EXERCISES = [
   { id: 'ab-wheel', name: 'Rueda abdominal', group: 'core', type: 'aislamiento', equip: 'peso corporal', cues: 'Rueda sin arquear la lumbar.', errors: 'Dejar caer la cadera.' },
   { id: 'leg-raise', name: 'Elevación de piernas en suelo', group: 'core', type: 'aislamiento', equip: 'peso corporal', cues: 'Lumbar pegada al suelo, baja controlado.', errors: 'Despegar la lumbar.' },
   { id: 'mountain-climber', name: 'Escaladores', group: 'core', type: 'compuesto', equip: 'peso corporal', cues: 'Cadera baja, ritmo constante.', errors: 'Subir la cadera.' },
+  { id: 'farmer-carry', name: 'Paseo del granjero', group: 'core', type: 'compuesto', equip: 'mancuernas', cues: 'Peso pesado a los costados, torso erguido, pasos cortos.', errors: 'Inclinarse hacia un lado.' },
+  { id: 'cable-woodchop', name: 'Leñador en polea', group: 'core', type: 'compuesto', equip: 'polea', cues: 'Gira desde el tronco con brazos casi rectos, pivota el pie trasero.', errors: 'Girar solo con los brazos.' },
+  { id: 'pallof-press', name: 'Press Pallof', group: 'core', type: 'aislamiento', equip: 'polea', cues: 'Resiste el giro: extiende los brazos al frente y aguanta.', errors: 'Dejar que el tronco rote.' },
 
   // ---------- CARDIO ----------
   { id: 'treadmill', name: 'Cinta / carrera', group: 'cardio', type: 'compuesto', equip: 'cardio', cues: 'Ritmo sostenible, postura erguida.', errors: 'Agarrarse a las barras.' },

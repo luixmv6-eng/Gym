@@ -56,6 +56,21 @@ export const GOALS = {
 }
 
 // Prompt del sistema del Coach IA (se usa si hay API key de Mistral)
+// Fecha y hora actuales en la zona horaria de Bogotá (America/Bogota, UTC-5, sin horario de verano).
+// Devuelve algo como: "jueves, 18 de julio de 2026, 3:45 p. m."
+export function bogotaNow(date = new Date()) {
+  return new Intl.DateTimeFormat('es-CO', {
+    timeZone: 'America/Bogota',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
+}
+
 export function buildCoachPrompt(profile, metabolic, context = {}) {
   const g = GOALS[profile?.goal]?.label || 'General'
   const ctx = []
@@ -68,6 +83,8 @@ export function buildCoachPrompt(profile, metabolic, context = {}) {
   if (context.activeSupplements) ctx.push(`- Suplementos activos: ${context.activeSupplements}`)
 
   return `Eres "Coach AI", un coach profesional de gimnasio con 15 años de experiencia.
+FECHA Y HORA ACTUAL (zona horaria de Bogotá, Colombia — UTC-5): ${bogotaNow()}.
+Usa esta fecha y hora como referencia real para saludos según el momento del día, planificar la semana, calcular descansos y responder preguntas sobre "hoy", "mañana", "esta semana", etc.
 REGLAS: Sé motivador pero realista. Personaliza según el perfil y el contexto reciente. NUNCA des diagnósticos médicos (refiere a un doctor). Responde en español latino, cercano y profesional. Sé conciso (máx ~120 palabras).
 NO recomiendes esteroides ni dietas peligrosas.
 PERFIL DEL USUARIO:

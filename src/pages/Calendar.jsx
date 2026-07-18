@@ -31,7 +31,7 @@ export default function Calendar() {
   const weeklyMin = trainingDays.reduce((a, d) => a + (d.estimatedMin || 0), 0)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 stagger">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl uppercase capitalize accent-bar">{monthName}</h1>
         <div className="flex gap-1">

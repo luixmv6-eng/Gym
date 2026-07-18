@@ -42,7 +42,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 stagger">
       {/* Cabecera perfil */}
       <Card className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center">

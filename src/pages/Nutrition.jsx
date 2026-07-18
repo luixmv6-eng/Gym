@@ -20,7 +20,7 @@ export default function Nutrition() {
   const goal = metabolic?.macros || { protein: 0, carbs: 0, fat: 0 }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 stagger">
       <div className="flex gap-2">
         <Tab active={tab === 'diario'} onClick={() => setTab('diario')}>
           Diario

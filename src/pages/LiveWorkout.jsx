@@ -4,7 +4,7 @@ import { useStore, todayStr } from '../store/useStore'
 import { getExercise } from '../data/exercises'
 import { suggestedWeight, estimate1RM } from '../utils/calculations'
 import { platesPerSide, warmupSets, lastRecordFor, suggestNextWeight } from '../utils/gymTools'
-import { ExerciseMedia, Modal } from '../components/ui'
+import { ExerciseMedia, Modal, ProgressRing, AnimatedNumber, buzz } from '../components/ui'
 import {
   X, Check, SkipForward, Plus, Minus, Timer, Trophy, Dumbbell,
   History, TrendingUp, Disc3, Flame,
@@ -21,6 +21,7 @@ export default function LiveWorkout() {
   const [exIdx, setExIdx] = useState(0)
   const [setIdx, setSetIdx] = useState(0)
   const [rest, setRest] = useState(0)
+  const [restTotal, setRestTotal] = useState(0) // duración inicial, para el anillo de cuenta regresiva
   const [records, setRecords] = useState({})
   const [done, setDone] = useState(false)
   const [tools, setTools] = useState(false)
@@ -117,6 +118,7 @@ export default function LiveWorkout() {
   }
 
   const completeSet = () => {
+    buzz(20)
     const rec = records[current.id] ? [...records[current.id]] : []
     rec.push({ weight: +weight, reps: +reps, rpe: +rpe })
     setRecords({ ...records, [current.id]: rec })
@@ -124,6 +126,7 @@ export default function LiveWorkout() {
     if (setIdx + 1 < current.sets) {
       setSetIdx(setIdx + 1)
       setRest(restSec)
+      setRestTotal(restSec)
     } else {
       nextExercise()
     }
@@ -140,6 +143,11 @@ export default function LiveWorkout() {
   }
 
   const finish = () => {
+    try {
+      navigator.vibrate?.([30, 60, 30, 60, 80]) // patrón de celebración
+    } catch {
+      /* sin soporte */
+    }
     const duration = Math.round((Date.now() - started) / 60000)
     logWorkout({
       date: todayStr(),
@@ -223,18 +231,26 @@ export default function LiveWorkout() {
             </div>
           )}
 
-          {/* Timer de descanso */}
+          {/* Timer de descanso: anillo de cuenta regresiva */}
           {rest > 0 && (
-            <div className="my-5 animate-scale-in">
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <Timer className="w-6 h-6" />
-                <span className="text-5xl font-display tabular">
+            <div className="my-5 animate-scale-in flex flex-col items-center">
+              <ProgressRing value={rest} max={restTotal || rest} size={156} stroke={10} color="#F97316">
+                <span className="text-4xl font-display tabular text-slate-100 leading-none">
                   {mm}:{ss}
                 </span>
-              </div>
-              <p className="text-sm text-muted mt-1">Descanso — prepárate para la siguiente serie</p>
+                <span className="text-[10px] uppercase tracking-widest text-muted mt-1 flex items-center gap-1">
+                  <Timer className="w-3 h-3" /> descanso
+                </span>
+              </ProgressRing>
+              <p className="text-sm text-muted mt-3">Respira — prepárate para la siguiente serie</p>
               <div className="flex gap-2 justify-center mt-3">
-                <button className="btn-ghost text-sm py-2" onClick={() => setRest((r) => r + 30)}>
+                <button
+                  className="btn-ghost text-sm py-2"
+                  onClick={() => {
+                    setRest((r) => r + 30)
+                    setRestTotal((t) => t + 30)
+                  }}
+                >
                   +30s
                 </button>
                 <button className="btn-ghost text-sm py-2" onClick={() => setRest(0)}>
@@ -423,9 +439,10 @@ function Summary({ plan, records, started, nav, exercises, resolve, workoutLog }
 
   return (
     <Fullscreen>
+      <Confetti />
       <div className="w-full max-w-md flex flex-col gap-4 animate-fade-up text-center">
-        <div className="w-16 h-16 rounded-full bg-accent/15 flex items-center justify-center mx-auto">
-          <Check className="w-8 h-8 text-accent" />
+        <div className="w-16 h-16 rounded-full bg-accent/15 flex items-center justify-center mx-auto animate-pop shadow-glow-accent">
+          <Check className="w-8 h-8 text-accent" strokeWidth={3} />
         </div>
         <h1 className="text-3xl uppercase">¡Entrenamiento completado!</h1>
         <p className="text-muted">{plan.title}</p>
@@ -474,10 +491,46 @@ function Summary({ plan, records, started, nav, exercises, resolve, workoutLog }
 function MiniStat({ value, unit, label }) {
   return (
     <div className="card p-3">
-      <div className="font-display text-2xl text-primary tabular">{value}</div>
+      <div className="font-display text-2xl text-primary">
+        <AnimatedNumber value={value} duration={900} />
+      </div>
       <div className="text-[11px] text-muted">
         {unit} · {label}
       </div>
+    </div>
+  )
+}
+
+// Lluvia de confeti en CSS puro para la pantalla de entrenamiento completado.
+function Confetti({ count = 26 }) {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 1.2,
+        duration: 2.4 + Math.random() * 1.6,
+        size: 6 + Math.random() * 6,
+        color: ['#F97316', '#FB923C', '#22C55E', '#4ADE80', '#3B82F6', '#EAB308'][i % 6],
+        rounded: i % 3 === 0,
+      })),
+    [count]
+  )
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          className="absolute top-0"
+          style={{
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size * (p.rounded ? 1 : 0.6),
+            background: p.color,
+            borderRadius: p.rounded ? '9999px' : '2px',
+            animation: `confetti-fall ${p.duration}s ${p.delay}s cubic-bezier(0.3,0,0.8,1) both`,
+          }}
+        />
+      ))}
     </div>
   )
 }

@@ -18,7 +18,7 @@ export default function Routines() {
   const vol = routine.weeklyVolume || {}
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 stagger">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl uppercase accent-bar">Mi rutina</h1>
         <button className="btn-ghost text-sm py-2" onClick={regenerateRoutine}>
@@ -55,7 +55,8 @@ export default function Routines() {
       )}
 
       <p className="text-xs text-muted -mt-1">
-        Ciclo {routine.cycle + 1}/3 · rota los ejercicios cada 4 semanas para seguir progresando.
+        Semana de entrenamiento #{routine.cycle + 1} · los ejercicios de cada grupo rotan
+        automáticamente cada lunes para que no repitas la misma sesión.
       </p>
 
       {routine.week.map((day, i) => (

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { buildMetabolicProfile } from '../utils/calculations'
-import { generateRoutine } from '../utils/routineGenerator'
+import { generateRoutine, weeksSince } from '../utils/routineGenerator'
 
 export const todayStr = (d = new Date()) => d.toISOString().slice(0, 10)
 
@@ -63,8 +63,22 @@ export const useStore = create(
       regenerateRoutine: () => {
         const { profile, routine } = get()
         if (!profile) return
-        const nextCycle = ((routine?.cycle ?? 0) + 1) % 3
+        const nextCycle = (routine?.cycle ?? 0) + 1
         set({ routine: generateRoutine(profile, nextCycle) })
+      },
+
+      // Rotación semanal automática: cada lunes los ejercicios de cada grupo
+      // muscular rotan (el ciclo avanza tantas semanas como hayan pasado).
+      // Devuelve true si hubo rotación, para que la UI pueda avisar.
+      ensureWeeklyRotation: () => {
+        const { profile, routine } = get()
+        if (!profile || !routine) return false
+        const weeks = weeksSince(routine.createdAt)
+        if (weeks < 1) return false
+        // generateRoutine fija createdAt = ahora, así que la próxima rotación
+        // será el lunes siguiente (weeksSince se alinea a lunes de calendario).
+        set({ routine: generateRoutine(profile, (routine.cycle ?? 0) + weeks) })
+        return true
       },
       substituteExercise: (originalId, newId) =>
         set({ substitutions: { ...get().substitutions, [originalId]: newId } }),

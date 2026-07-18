@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { SUPPLEMENTS, getSupplement } from '../data/supplements'
 import { GOALS } from '../data/content'
-import { Card, Modal } from '../components/ui'
+import { Card, Modal, buzz } from '../components/ui'
 import { Pill, AlertTriangle, Clock, Bell, BellOff, Calculator, DollarSign } from 'lucide-react'
 
 export default function Supplements() {
@@ -10,7 +10,7 @@ export default function Supplements() {
   const [calc, setCalc] = useState(null) // supplement id abierto en calculadora
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 stagger">
       <h1 className="text-2xl uppercase">Suplementos</h1>
       <p className="text-sm text-muted -mt-2">
         Dosis calculadas según tu peso ({profile?.weight}kg) y objetivo ({GOALS[profile?.goal]?.label}).
@@ -20,7 +20,7 @@ export default function Supplements() {
         {SUPPLEMENTS.map((s) => {
           const active = activeSupplements.find((a) => a.id === s.id)
           return (
-            <Card key={s.id} className="flex items-center gap-3">
+            <Card key={s.id} className="flex items-center gap-3 hover-lift">
               <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                 <Pill className="w-5 h-5 text-primary" />
               </div>
@@ -28,12 +28,15 @@ export default function Supplements() {
                 <div className="font-semibold truncate">{s.name}</div>
                 <div className="text-xs text-muted truncate">{s.role}</div>
               </div>
-              <button className="btn-ghost text-sm py-2 px-3" onClick={() => setCalc(s.id)}>
+              <button className="btn-ghost text-sm py-2 px-3" onClick={() => setCalc(s.id)} aria-label="Calculadora de dosis">
                 <Calculator className="w-4 h-4" />
               </button>
               <button
                 className={`btn text-sm py-2 px-3 ${active ? 'bg-accent text-slate-900' : 'bg-bg-soft border border-line text-slate-300'}`}
-                onClick={() => toggleSupplement(s.id, 1)}
+                onClick={() => {
+                  buzz()
+                  toggleSupplement(s.id, 1)
+                }}
               >
                 {active ? 'Activo' : 'Añadir'}
               </button>

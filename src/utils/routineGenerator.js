@@ -5,6 +5,23 @@ const EXERCISE_BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+// Timestamp del lunes a las 00:00 de la semana a la que pertenece la fecha.
+function mondayOf(ts) {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // Lunes=0
+  return d.getTime()
+}
+
+// Semanas de calendario completas entre la creación de la rutina y hoy.
+// Cambia de valor exactamente cada lunes, igual que la semana del plan.
+export function weeksSince(createdAt, now = Date.now()) {
+  if (!createdAt) return 0
+  return Math.max(0, Math.round((mondayOf(now) - mondayOf(createdAt)) / WEEK_MS))
+}
+
 // Distribución de días de entrenamiento en la semana (para dejar descansos espaciados)
 const WEEK_PATTERN = {
   1: [0],
@@ -73,14 +90,20 @@ function titleFor(groups) {
 }
 
 // Ordena candidatos: primero compuestos (uno por grupo, round-robin), luego aislamientos.
+// El ciclo rota compuestos y aislamientos POR SEPARADO dentro de cada grupo: así cada
+// semana cambia el ejercicio principal de todos los grupos (incluso los que tienen pocos
+// compuestos) y la lista tarda su longitud en semanas en repetir el mismo orden.
 function candidatesFor(groups, cycle) {
+  const rotate = (arr, by) => {
+    if (arr.length < 2) return arr
+    const start = by % arr.length
+    return [...arr.slice(start), ...arr.slice(0, start)]
+  }
   const pools = groups.map((g) => {
     const pool = EXERCISES_BY_GROUP[g] || []
-    const start = (cycle * 2) % Math.max(1, pool.length)
-    const rotated = [...pool.slice(start), ...pool.slice(0, start)]
     return {
-      compound: rotated.filter((e) => e.type === 'compuesto'),
-      isolation: rotated.filter((e) => e.type === 'aislamiento'),
+      compound: rotate(pool.filter((e) => e.type === 'compuesto'), cycle),
+      isolation: rotate(pool.filter((e) => e.type === 'aislamiento'), cycle),
     }
   })
   const out = []
