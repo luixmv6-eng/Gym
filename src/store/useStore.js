@@ -6,6 +6,7 @@ import { generateRoutine, weeksSince } from '../utils/routineGenerator'
 export const todayStr = (d = new Date()) => d.toISOString().slice(0, 10)
 
 const initial = {
+  hydrating: false, // true mientras se descarga el estado de la nube tras el login
   session: null, // { email }
   profile: null, // datos del formulario
   metabolic: null, // { bmr, tdee, calories, macros, bmi }
@@ -30,6 +31,7 @@ export const useStore = create(
       // user: { id, email }
       login: (user) => set({ session: typeof user === 'string' ? { id: 'local', email: user } : user }),
       logout: () => set({ session: null }),
+      setHydrating: (hydrating) => set({ hydrating }),
 
       // ---- Onboarding ----
       completeOnboarding: (profile) => {
@@ -136,6 +138,9 @@ export const useStore = create(
     {
       name: 'gym-companion-v1',
       version: 2,
+      // El flag de hidratación es transitorio: nunca debe persistirse
+      // (si quedara guardado en true, la app arrancaría bloqueada en el spinner).
+      partialize: ({ hydrating, ...rest }) => rest,
       // Regenera rutinas creadas antes del rediseño para que tengan los campos nuevos
       // (duración estimada, volumen semanal, distribución de días, etc.)
       migrate: (persisted) => {

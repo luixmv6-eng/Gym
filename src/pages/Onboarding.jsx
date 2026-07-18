@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { buildMetabolicProfile } from '../utils/calculations'
@@ -33,10 +33,17 @@ const empty = {
 
 export default function Onboarding() {
   const complete = useStore((s) => s.completeOnboarding)
+  const profile = useStore((s) => s.profile)
   const nav = useNavigate()
   const [step, setStep] = useState(0)
   const [f, setF] = useState(empty)
   const up = (patch) => setF((s) => ({ ...s, ...patch }))
+
+  // Si el perfil aparece mientras se muestra el formulario (la sincronización
+  // con la nube terminó tarde), este usuario ya tiene cuenta: directo al inicio.
+  useEffect(() => {
+    if (profile) nav('/', { replace: true })
+  }, [profile]) // eslint-disable-line
 
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1))
   const back = () => setStep((s) => Math.max(0, s - 1))

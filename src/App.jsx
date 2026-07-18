@@ -31,8 +31,19 @@ function Loading() {
 function Protected({ children }) {
   const session = useStore((s) => s.session)
   const profile = useStore((s) => s.profile)
+  const hydrating = useStore((s) => s.hydrating)
   const loc = useLocation()
   if (!session) return <Navigate to="/login" replace state={{ from: loc }} />
+  // Mientras se descarga el estado de la nube, espera antes de decidir si hay
+  // perfil — evita mandar al onboarding a un usuario que SÍ tiene datos.
+  if (!profile && hydrating) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-line border-t-primary animate-spin" />
+        <p className="text-sm text-muted">Recuperando tus datos…</p>
+      </div>
+    )
+  }
   if (!profile && loc.pathname !== '/onboarding') return <Navigate to="/onboarding" replace />
   return children
 }
@@ -41,6 +52,7 @@ export default function App() {
   const session = useStore((s) => s.session)
   const login = useStore((s) => s.login)
   const logout = useStore((s) => s.logout)
+  const setHydrating = useStore((s) => s.setHydrating)
   const ensureWeeklyRotation = useStore((s) => s.ensureWeeklyRotation)
 
   // Rotación semanal de ejercicios: al abrir la app y al volver a ella,
@@ -68,7 +80,12 @@ export default function App() {
       if (!active) return
       if (user) {
         login(user)
-        await pullState(user.id)
+        setHydrating(true)
+        try {
+          await pullState(user.id)
+        } finally {
+          setHydrating(false)
+        }
         ensureWeeklyRotation() // la nube puede traer una rutina de semanas anteriores
         startSync(user.id, user.email)
       }
@@ -77,7 +94,12 @@ export default function App() {
     const unsub = onAuthChange(async (user, event) => {
       if (user) {
         login(user)
-        await pullState(user.id)
+        setHydrating(true)
+        try {
+          await pullState(user.id)
+        } finally {
+          setHydrating(false)
+        }
         ensureWeeklyRotation() // la nube puede traer una rutina de semanas anteriores
         startSync(user.id, user.email)
       } else if (event === 'SIGNED_OUT') {

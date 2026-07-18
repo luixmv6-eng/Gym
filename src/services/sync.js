@@ -96,7 +96,10 @@ let unsub = null
 export function startSync(userId, email) {
   stopSync()
   if (!isSupabaseEnabled || !userId || userId === 'local') return
-  // Empuje inicial del perfil (por si ya hay onboarding hecho al iniciar sesión).
+  // Empuje inicial de estado y perfil: si este dispositivo tiene datos que la
+  // nube no conoce (p. ej. onboarding hecho antes de configurar Supabase),
+  // se suben ya, sin esperar a que el usuario cambie algo.
+  pushState(userId)
   pushProfile(userId, email)
   unsub = useStore.subscribe(() => {
     clearTimeout(timer)
