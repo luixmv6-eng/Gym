@@ -1,5 +1,7 @@
-import { EXERCISES_BY_GROUP, MUSCLE_GROUPS } from '../data/exercises'
+import { EXERCISES, EXERCISES_BY_GROUP, MUSCLE_GROUPS } from '../data/exercises'
 import { GOALS } from '../data/content'
+
+const EXERCISE_BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -111,8 +113,7 @@ function weeklyVolume(week) {
   week.forEach((d) => {
     if (d.rest) return
     d.exercises.forEach((e) => {
-      const g = EXERCISES_BY_GROUP // no-op para claridad
-      const ex = Object.values(EXERCISES_BY_GROUP).flat().find((x) => x.id === e.id)
+      const ex = EXERCISE_BY_ID.get(e.id)
       if (ex) vol[ex.group] = (vol[ex.group] || 0) + e.sets
     })
   })

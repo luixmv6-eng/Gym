@@ -9,7 +9,7 @@ import { isSupabaseEnabled } from '../services/supabaseClient'
 import { LogOut, Download, Trash2, User, Bell, Cloud, CloudOff } from 'lucide-react'
 
 export default function Profile() {
-  const { profile, metabolic, updateProfile, logout, resetAll, settings, updateSettings, workoutLog } = useStore()
+  const { profile, metabolic, updateProfile, logout, resetAll, settings, updateSettings, workoutLog, session } = useStore()
   const nav = useNavigate()
   const cat = bmiCategory(metabolic?.bmi)
 
@@ -122,7 +122,7 @@ export default function Profile() {
       <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600">
         {isSupabaseEnabled ? (
           <>
-            <Cloud className="w-3.5 h-3.5 text-accent" /> Sincronizado en la nube · {profile?.name && useStore.getState().session?.email}
+            <Cloud className="w-3.5 h-3.5 text-accent" /> Sincronizado en la nube · {session?.email}
           </>
         ) : (
           <>

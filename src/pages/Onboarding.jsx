@@ -48,6 +48,7 @@ export default function Onboarding() {
       weight: +f.weight,
       height: +f.height,
       daysPerWeek: +f.daysPerWeek,
+      sessionMin: +f.sessionMin,
       chest: f.chest ? +f.chest : null,
       waist: f.waist ? +f.waist : null,
       hip: f.hip ? +f.hip : null,

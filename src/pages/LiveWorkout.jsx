@@ -1,13 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, todayStr } from '../store/useStore'
 import { getExercise } from '../data/exercises'
 import { suggestedWeight, estimate1RM } from '../utils/calculations'
-import { ExerciseMedia } from '../components/ui'
-import { X, Check, SkipForward, Plus, Minus, Timer, Trophy, Dumbbell } from 'lucide-react'
+import { platesPerSide, warmupSets, lastRecordFor, suggestNextWeight } from '../utils/gymTools'
+import { ExerciseMedia, Modal } from '../components/ui'
+import {
+  X, Check, SkipForward, Plus, Minus, Timer, Trophy, Dumbbell,
+  History, TrendingUp, Disc3, Flame,
+} from 'lucide-react'
 
 export default function LiveWorkout() {
-  const { routine, profile, substitutions, logWorkout } = useStore()
+  const { routine, profile, substitutions, logWorkout, workoutLog } = useStore()
   const nav = useNavigate()
   const dow = (new Date().getDay() + 6) % 7
   const plan = routine?.week?.[dow]
@@ -17,25 +21,53 @@ export default function LiveWorkout() {
   const [exIdx, setExIdx] = useState(0)
   const [setIdx, setSetIdx] = useState(0)
   const [rest, setRest] = useState(0)
-  const [records, setRecords] = useState({}) // exId -> [{weight,reps,rpe}]
+  const [records, setRecords] = useState({})
   const [done, setDone] = useState(false)
-  const beep = useRef(null)
+  const [tools, setTools] = useState(false)
 
   const exercises = plan?.exercises || []
   const current = exercises[exIdx]
   const meta = current ? getExercise(resolve(current.id)) : null
-  const suggested = meta
+
+  // Historial del ejercicio actual + sugerencia de sobrecarga progresiva
+  const last = useMemo(
+    () => (current ? lastRecordFor(workoutLog, resolve(current.id)) : null),
+    [current?.id] // eslint-disable-line
+  )
+  const suggestion = useMemo(() => suggestNextWeight(last, current?.reps), [last, current?.reps])
+
+  const formulaWeight = meta
     ? suggestedWeight(profile.weight, profile.experience, meta.type === 'compuesto')
     : 0
 
-  const [weight, setWeight] = useState(suggested)
+  const [weight, setWeight] = useState(formulaWeight)
   const [reps, setReps] = useState(0)
   const [rpe, setRpe] = useState(8)
 
+  // Prefill inteligente: última sesión (con progresión) > fórmula por peso corporal
   useEffect(() => {
-    setWeight(suggested)
+    setWeight(suggestion?.weight ?? formulaWeight)
     setReps(parseInt(current?.reps) || 10)
   }, [exIdx]) // eslint-disable-line
+
+  // Mantiene la pantalla encendida durante el entrenamiento (Wake Lock)
+  useEffect(() => {
+    let lock = null
+    const request = async () => {
+      try {
+        lock = await navigator.wakeLock?.request('screen')
+      } catch {}
+    }
+    request()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') request()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      lock?.release?.().catch(() => {})
+    }
+  }, [])
 
   // Timer de descanso
   useEffect(() => {
@@ -53,7 +85,7 @@ export default function LiveWorkout() {
       })
     }, 1000)
     return () => clearInterval(t)
-  }, [rest])
+  }, [rest > 0]) // eslint-disable-line
 
   function playBeep() {
     try {
@@ -109,7 +141,7 @@ export default function LiveWorkout() {
 
   const finish = () => {
     const duration = Math.round((Date.now() - started) / 60000)
-    const summary = {
+    logWorkout({
       date: todayStr(),
       dayTitle: plan.title,
       duration,
@@ -118,15 +150,18 @@ export default function LiveWorkout() {
         name: getExercise(resolve(e.id))?.name,
         sets: records[e.id] || [],
       })),
-    }
-    logWorkout(summary)
+    })
     setDone(true)
   }
 
-  if (done) return <Summary plan={plan} records={records} started={started} nav={nav} resolve={resolve} exercises={exercises} />
+  if (done)
+    return (
+      <Summary plan={plan} records={records} started={started} nav={nav} exercises={exercises} resolve={resolve} workoutLog={workoutLog} />
+    )
 
   const mm = String(Math.floor(rest / 60)).padStart(2, '0')
   const ss = String(rest % 60).padStart(2, '0')
+  const showTools = meta?.equip === 'barra' || meta?.type === 'compuesto'
 
   return (
     <Fullscreen>
@@ -144,14 +179,12 @@ export default function LiveWorkout() {
           </button>
         </div>
 
-        {/* Progreso ejercicios */}
+        {/* Progreso */}
         <div className="flex gap-1">
           {exercises.map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 flex-1 rounded-full ${
-                i < exIdx ? 'bg-accent' : i === exIdx ? 'bg-primary' : 'bg-bg-soft'
-              }`}
+              className={`h-1.5 flex-1 rounded-full ${i < exIdx ? 'bg-accent' : i === exIdx ? 'bg-primary' : 'bg-bg-soft'}`}
             />
           ))}
         </div>
@@ -168,6 +201,27 @@ export default function LiveWorkout() {
             </div>
           )}
           <p className="text-sm text-muted mt-2">{meta?.cues}</p>
+
+          {/* Última sesión + progresión */}
+          {last && rest === 0 && (
+            <div className="mt-3 flex flex-col gap-1 items-center">
+              <span className="text-xs text-muted tabular flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5" />
+                Última vez ({last.date.slice(5)}): {last.best.weight}kg × {last.best.reps}
+              </span>
+              {suggestion && (
+                <span
+                  className={`chip text-xs ${suggestion.increased ? 'border-accent/40 text-accent bg-accent/10' : 'border-line text-slate-300'}`}
+                  style={{ cursor: 'default' }}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  {suggestion.increased
+                    ? `¡Sube a ${suggestion.weight}kg! Superaste el rango`
+                    : `Repite ${suggestion.weight}kg hasta dominar el rango`}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Timer de descanso */}
           {rest > 0 && (
@@ -192,7 +246,7 @@ export default function LiveWorkout() {
 
           {/* Inputs de la serie */}
           {rest === 0 && (
-            <div className="mt-5 flex flex-col gap-4 animate-fade-up">
+            <div className="mt-4 flex flex-col gap-4 animate-fade-up">
               <div className="grid grid-cols-2 gap-3">
                 <Counter label="Peso (kg)" value={weight} onChange={setWeight} step={2.5} />
                 <Counter label="Reps" value={reps} onChange={setReps} step={1} />
@@ -211,9 +265,16 @@ export default function LiveWorkout() {
               <button className="btn-accent" onClick={completeSet}>
                 <Check className="w-5 h-5" /> Completar serie
               </button>
-              <button className="text-sm text-muted flex items-center gap-1 justify-center" onClick={nextExercise}>
-                <SkipForward className="w-4 h-4" /> Saltar ejercicio
-              </button>
+              <div className="flex items-center justify-center gap-4">
+                {showTools && (
+                  <button className="text-sm text-slate-300 flex items-center gap-1" onClick={() => setTools(true)}>
+                    <Disc3 className="w-4 h-4 text-primary" /> Discos y calentamiento
+                  </button>
+                )}
+                <button className="text-sm text-muted flex items-center gap-1" onClick={nextExercise}>
+                  <SkipForward className="w-4 h-4" /> Saltar
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -232,14 +293,86 @@ export default function LiveWorkout() {
           </div>
         )}
       </div>
+
+      {/* Herramientas: discos + calentamiento */}
+      <Modal open={tools} onClose={() => setTools(false)} title="Discos y calentamiento">
+        <ToolsPanel weight={+weight} isBar={meta?.equip === 'barra'} isCompound={meta?.type === 'compuesto'} />
+      </Modal>
     </Fullscreen>
   )
 }
 
-function Fullscreen({ children }) {
+function ToolsPanel({ weight, isBar, isCompound }) {
+  const [bar, setBar] = useState(20)
+  const { plates, remainder, possible } = platesPerSide(weight, bar)
+  const warmup = warmupSets(weight, isBar ? bar : 0)
+
   return (
-    <div className="min-h-dvh bg-bg flex items-center justify-center p-4">{children}</div>
+    <div className="flex flex-col gap-5">
+      {isBar && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm uppercase text-primary flex items-center gap-1.5">
+              <Disc3 className="w-4 h-4" /> Discos por lado · {weight}kg
+            </h4>
+            <select className="input py-1 w-auto min-h-0 text-sm" value={bar} onChange={(e) => setBar(+e.target.value)}>
+              {[20, 15, 10].map((b) => (
+                <option key={b} value={b}>Barra {b}kg</option>
+              ))}
+            </select>
+          </div>
+          {weight <= bar ? (
+            <p className="text-sm text-muted">Con la barra sola ya llegas ({bar}kg).</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {plates.map((p, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center justify-center rounded-full font-display tabular text-slate-950"
+                    style={{
+                      width: 40 + p, height: 40 + p, fontSize: 13,
+                      background: p >= 20 ? '#F97316' : p >= 10 ? '#FB923C' : p >= 5 ? '#22C55E' : '#8A98AD',
+                    }}
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+              {!possible && remainder > 0 && (
+                <p className="text-xs text-muted mt-2 tabular">
+                  Faltan {remainder.toFixed(2)}kg por lado (no hay disco tan pequeño): carga {(weight - remainder * 2).toFixed(1)}kg.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {isCompound && (
+        <div>
+          <h4 className="text-sm uppercase text-primary flex items-center gap-1.5 mb-2">
+            <Flame className="w-4 h-4" /> Series de aproximación
+          </h4>
+          <div className="flex flex-col gap-1.5">
+            {warmup.map((s, i) => (
+              <div key={i} className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-bg-soft text-sm">
+                <span className="text-slate-300">{s.label}</span>
+                <span className="tabular text-slate-100">
+                  {s.weight}kg × {s.reps}
+                </span>
+              </div>
+            ))}
+            <p className="text-xs text-muted mt-1">Descansa 60-90s entre series de aproximación. Luego, a tu peso de trabajo.</p>
+          </div>
+        </div>
+      )}
+    </div>
   )
+}
+
+function Fullscreen({ children }) {
+  return <div className="min-h-dvh bg-bg flex items-center justify-center p-4">{children}</div>
 }
 
 function Counter({ label, value, onChange, step }) {
@@ -247,19 +380,10 @@ function Counter({ label, value, onChange, step }) {
     <div>
       <label className="label text-left">{label}</label>
       <div className="flex items-center gap-2">
-        <button
-          className="btn-ghost px-0 w-11 shrink-0"
-          onClick={() => onChange(Math.max(0, +value - step))}
-          aria-label="Menos"
-        >
+        <button className="btn-ghost px-0 w-11 shrink-0" onClick={() => onChange(Math.max(0, +value - step))} aria-label="Menos">
           <Minus className="w-4 h-4" />
         </button>
-        <input
-          type="number"
-          className="input text-center tabular"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <input type="number" className="input text-center tabular" value={value} onChange={(e) => onChange(e.target.value)} />
         <button className="btn-ghost px-0 w-11 shrink-0" onClick={() => onChange(+value + step)} aria-label="Más">
           <Plus className="w-4 h-4" />
         </button>
@@ -268,13 +392,34 @@ function Counter({ label, value, onChange, step }) {
   )
 }
 
-function Summary({ plan, records, started, nav, exercises, resolve }) {
+function Summary({ plan, records, started, nav, exercises, resolve, workoutLog }) {
   const duration = Math.round((Date.now() - started) / 60000)
   const totalSets = Object.values(records).reduce((a, r) => a + r.length, 0)
-  const best = Object.entries(records).reduce((acc, [id, sets]) => {
-    const top = sets.reduce((m, s) => Math.max(m, estimate1RM(s.weight, s.reps)), 0)
-    return top > acc.val ? { id, val: top } : acc
-  }, { id: null, val: 0 })
+  const totalVolume = Object.values(records)
+    .flat()
+    .reduce((a, s) => a + s.weight * s.reps, 0)
+
+  const best = Object.entries(records).reduce(
+    (acc, [id, sets]) => {
+      const top = sets.reduce((m, s) => Math.max(m, estimate1RM(s.weight, s.reps)), 0)
+      return top > acc.val ? { id, val: top } : acc
+    },
+    { id: null, val: 0 }
+  )
+
+  // PRs: compara el mejor 1RM de hoy contra todo el historial anterior
+  const prs = Object.entries(records).filter(([id, sets]) => {
+    const todayBest = sets.reduce((m, s) => Math.max(m, estimate1RM(s.weight, s.reps)), 0)
+    if (!todayBest) return false
+    let historicBest = 0
+    for (const w of workoutLog.slice(1)) {
+      const ex = w.exercises?.find((e) => e.id === id)
+      ex?.sets?.forEach((s) => {
+        historicBest = Math.max(historicBest, estimate1RM(s.weight, s.reps))
+      })
+    }
+    return historicBest > 0 && todayBest > historicBest
+  })
 
   return (
     <Fullscreen>
@@ -287,17 +432,27 @@ function Summary({ plan, records, started, nav, exercises, resolve }) {
 
         <div className="grid grid-cols-3 gap-3">
           <MiniStat value={duration} unit="min" label="Duración" />
-          <MiniStat value={exercises.length} unit="ej." label="Ejercicios" />
           <MiniStat value={totalSets} unit="series" label="Completadas" />
+          <MiniStat value={Math.round(totalVolume)} unit="kg" label="Volumen total" />
         </div>
 
-        {best.id && (
+        {prs.length > 0 && (
+          <div className="card p-4 flex items-center gap-3 text-left border-primary/40">
+            <Trophy className="w-6 h-6 text-primary shrink-0" />
+            <div>
+              <p className="text-sm text-slate-100 font-semibold">¡Nuevo récord personal!</p>
+              <p className="text-xs text-muted">
+                {prs.map(([id]) => getExercise(id)?.name).join(' · ')}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {best.id && prs.length === 0 && (
           <div className="card p-4 flex items-center gap-3 text-left">
             <Trophy className="w-6 h-6 text-primary shrink-0" />
             <div>
-              <p className="text-sm text-slate-200 font-semibold">
-                Mejor esfuerzo: {getExercise(best.id)?.name}
-              </p>
+              <p className="text-sm text-slate-200 font-semibold">Mejor esfuerzo: {getExercise(best.id)?.name}</p>
               <p className="text-xs text-muted tabular">1RM estimado: {best.val}kg</p>
             </div>
           </div>

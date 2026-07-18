@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useStore, todayStr } from '../store/useStore'
 import { Card, ProgressBar, GroupBadge } from '../components/ui'
 import { tipOfDay } from '../data/content'
-import { Play, Flame, TrendingUp, Lightbulb, ChevronRight, Trophy, Clock } from 'lucide-react'
+import { Play, Flame, TrendingUp, Lightbulb, ChevronRight, Trophy, Clock, Droplets, Plus, Minus } from 'lucide-react'
 
 function computeStreak(log) {
   if (!log.length) return 0
@@ -19,7 +19,7 @@ function computeStreak(log) {
 }
 
 export default function Dashboard() {
-  const { profile, metabolic, routine, workoutLog, foodLog } = useStore()
+  const { profile, metabolic, routine, workoutLog, foodLog, dayNotes, setDayNote } = useStore()
   const today = todayStr()
   const dow = (new Date().getDay() + 6) % 7 // Lunes=0
   const todayPlan = routine?.week?.[dow]
@@ -101,6 +101,13 @@ export default function Dashboard() {
         </div>
       </Card>
 
+      {/* Hidratación */}
+      <WaterCard
+        liters={dayNotes[today]?.water ?? 0}
+        goal={Math.round((profile?.weight || 70) * 0.035 * 2) / 2}
+        onChange={(v) => setDayNote(today, { water: v })}
+      />
+
       {/* Tip del día */}
       <Card className="flex gap-3 items-start bg-bg-soft">
         <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
@@ -123,6 +130,33 @@ function StatMini({ icon: Icon, label, value, unit, color }) {
         {value ?? '—'}
       </span>
       <span className="text-[11px] text-muted">{label} · {unit}</span>
+    </Card>
+  )
+}
+
+function WaterCard({ liters, goal, onChange }) {
+  return (
+    <Card className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+        <Droplets className="w-5 h-5 text-blue-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-slate-300">Agua de hoy</span>
+          <span className="tabular text-muted">
+            {liters}L / {goal}L
+          </span>
+        </div>
+        <ProgressBar value={liters} max={goal} color="#60A5FA" />
+      </div>
+      <div className="flex gap-1.5 shrink-0">
+        <button className="btn-ghost px-0 w-10 h-10" onClick={() => onChange(Math.max(0, +(liters - 0.25).toFixed(2)))} aria-label="Menos agua">
+          <Minus className="w-4 h-4" />
+        </button>
+        <button className="btn-ghost px-0 w-10 h-10" onClick={() => onChange(+(liters + 0.25).toFixed(2))} aria-label="Más agua">
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
     </Card>
   )
 }
